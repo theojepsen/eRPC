@@ -8,7 +8,8 @@ include(CMakeDependentOption)
 set(CMAKE_CXX_COMPILER g++)
 
 add_definitions(-std=c++11 -march=native -g)
-add_definitions(-Wall -Wextra -Werror -pedantic -Wsign-conversion -Wold-style-cast)
+#add_definitions(-Wall -Wextra -Werror -pedantic -Wsign-conversion -Wold-style-cast)
+add_definitions(-Wsign-conversion -Wold-style-cast)
 add_definitions(-Wno-unused-function -Wno-nested-anon-types -Wno-keyword-macro)
 
 set(LIBRARIES ${LIBRARIES} rt numa pthread gflags)
@@ -176,6 +177,21 @@ set(MICA_SOURCES
   mica/src/mica/util/cityhash/city_mod.cc
   mica/src/mica/util/config.cc)
 
+set(NUEVOMATCH_OBJECTS
+  third_party/nuevomatch/bin/vector_list.o
+  third_party/nuevomatch/bin/rule_db.o
+  third_party/nuevomatch/bin/simd_aux.o
+  third_party/nuevomatch/bin/matrix_operations.o
+  third_party/nuevomatch/bin/rqrmi_model.o
+  third_party/nuevomatch/bin/interval_set.o
+  third_party/nuevomatch/bin/logging.o
+  third_party/nuevomatch/bin/serial_nuevomatch.o
+  third_party/nuevomatch/bin/rqrmi_fast.o
+  third_party/nuevomatch/bin/object_io.o
+  third_party/nuevomatch/bin/cut_split.o
+  third_party/nuevomatch/bin/hyper_split.o
+  third_party/nuevomatch/bin/string_operations.o)
+
 # The tests to run using ctest
 set(CLIENT_TESTS
   create_session_test
@@ -283,6 +299,9 @@ elseif(APP STREQUAL "masstree_analytics")
 elseif(APP STREQUAL "mica_test")
   include_directories(mica/src)
   set(APP_ADDITIONAL_SOURCES ${MICA_SOURCES})
+elseif(APP STREQUAL "classify")
+  include_directories(third_party/nuevomatch/include third_party/nuevomatch/vendor)
+  set(APP_ADDITIONAL_SOURCES ${NUEVOMATCH_OBJECTS})
 elseif(APP STREQUAL "latency")
   set(LIBRARIES ${LIBRARIES} ${PMEM})
 elseif(APP STREQUAL "pmem_bw")
