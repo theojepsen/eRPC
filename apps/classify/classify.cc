@@ -15,8 +15,8 @@
 
 #define CLASSIFICATION_HEADER_WORDS 3
 struct classification_hdr_t {
-  uint64_t egr_ts; // switch sends req
-  uint64_t ingress_mac_tstamp; // switch receives resp
+  uint64_t egr_ts; // switch sends req to server
+  uint64_t ingress_mac_tstamp; // switch receives resp from server
   uint32_t trace_idx;
   int32_t match_priority;
   uint64_t headers[CLASSIFICATION_HEADER_WORDS];
@@ -25,7 +25,14 @@ struct classification_hdr_t {
 static constexpr size_t kAppEvLoopMs = 1000;  // Duration of event loop
 static constexpr bool kAppVerbose = false;    // Print debug info on datapath
 static constexpr double kAppLatFac = 10.0;    // Precision factor for latency
+
+#define USE_SWITCH_TIMESTAMPING false
+#if USE_SWITCH_TIMESTAMPING
+// XXX If set to 123, the switch will insert timestamps in egr_ts and ingress_mac_tstamp.
+static constexpr size_t kAppReqType = 123;    // eRPC request type
+#else
 static constexpr size_t kAppReqType = 1;      // eRPC request type
+#endif
 
 volatile sig_atomic_t ctrl_c_pressed = 0;
 void ctrl_c_handler(int) { ctrl_c_pressed = 1; }
@@ -127,6 +134,7 @@ void connect_session(ClientContext &c) {
 }
 
 void app_cont_func(void *, void *);
+
 inline void send_req(ClientContext &c) {
   c.start_tsc = erpc::rdtsc();
   assert(c.req_msgbuf.get_data_size() == sizeof(struct classification_hdr_t));
@@ -162,11 +170,11 @@ void app_cont_func(void *_context, void *) {
   uint32_t lat_ns = ingr_ts - egr_ts;
   //printf("egr_ts: 0x%lx    ingress_mac_tstamp: 0x%lx   latency: %ldns\n", egr_ts, ingr_ts, lat_ns);
 
-#if 1
+#if USE_SWITCH_TIMESTAMPING
+  double req_lat_us = lat_ns/1e3;
+#else
   double req_lat_us =
       erpc::to_usec(erpc::rdtsc() - c->start_tsc, c->rpc->get_freq_ghz());
-#else
-  double req_lat_us = lat_ns/1e3;
 #endif
   c->latency.update(static_cast<size_t>(req_lat_us * kAppLatFac));
 
